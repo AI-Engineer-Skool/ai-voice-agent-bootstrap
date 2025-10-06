@@ -1,0 +1,98 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# Virtual environments
+.env
+.envrc
+.venv/
+venv/
+env/
+.conda/
+
+# Python packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+share/python-wheels/
+pip-wheel-metadata/
+
+# Python tooling
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+*.log
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.hypothesis/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+.yarn/
+.npm/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+.cache/
+.vite/
+.eslintcache
+.stylelintcache
+.storybook-out/
+storybook-static/
+.vscode-test/
+*.tsbuildinfo
+out/
+build/
+dist/
+coverage/
+
+# Tooling caches
+.uv_cache/
+.turbo/
+.nx/cache/
+lerna-debug.log*
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment overrides
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+.env.*.local
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo

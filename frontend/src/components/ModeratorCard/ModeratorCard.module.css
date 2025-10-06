@@ -1,0 +1,75 @@
+.card {
+  background: #1e293b;
+  color: #f8fafc;
+  border-radius: 18px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.guidance {
+  line-height: 1.5;
+}
+
+.description {
+  font-size: 13px;
+  color: rgba(248, 250, 252, 0.72);
+  line-height: 1.5;
+}
+
+.guidanceLines {
+  display: grid;
+  gap: 12px;
+}
+
+.guidanceLine {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.lineLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.lineText {
+  line-height: 1.4;
+}
+
+.tone {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  font-size: 12px;
+}
+
+.status {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(248, 250, 252, 0.7);
+}

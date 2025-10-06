@@ -1,0 +1,55 @@
+.wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.button {
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: #e2e8f0;
+  color: #1f2933;
+}
+
+.danger {
+  background: #f97316;
+}
+
+.muteToggle {
+  padding: 10px 16px;
+}
+
+.muted {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.muteIcon {
+  font-size: 18px;
+}
+
+.muteIconActive {
+  color: #16a34a;
+}
+
+.muteIconMuted {
+  color: #ef4444;
+}
