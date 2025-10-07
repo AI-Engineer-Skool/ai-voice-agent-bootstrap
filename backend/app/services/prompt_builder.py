@@ -30,9 +30,13 @@ class PromptBuilder:
         if self._bundle is not None:
             return self._bundle
 
-        persona = (PROMPT_DIR / "agent_persona.md").read_text(encoding="utf-8").strip()
+        persona_text = (PROMPT_DIR / "agent_persona.md").read_text(encoding="utf-8").strip()
         checklist_text = (PROMPT_DIR / "survey_checklist.md").read_text(encoding="utf-8").strip()
-        moderator = (PROMPT_DIR / "moderator_instructions.md").read_text(encoding="utf-8").strip()
+        moderator_text = (PROMPT_DIR / "moderator_instructions.md").read_text(encoding="utf-8").strip()
+
+        appended_checklist = f"\n\n---\n{checklist_text}"
+        persona = f"{persona_text}{appended_checklist}"
+        moderator = f"{moderator_text}{appended_checklist}"
 
         checklist: List[ChecklistKey] = [
             "greeting",
@@ -61,7 +65,19 @@ class PromptBuilder:
             "\n\nKeep your questions aligned with the checklist. Summarise the highlight, pain point,"
             " and suggestion before closing with gratitude."
         )
-        instructions = f"{conversation_goal}\n\nChecklist:\n{bundle.checklist_text}"
+        instructions = conversation_goal
+
+        turn_detection = {
+            "type": "server_vad",
+            "threshold": 0.9,
+            "prefix_padding_ms": 300,
+            "silence_duration_ms": 1500,
+            "create_response": False,
+        }
+
+        input_audio_transcription = {
+            "model": "whisper-1",
+        }
 
         return SessionConfig(
             model=settings.get_realtime_model(),
@@ -69,6 +85,9 @@ class PromptBuilder:
             provider=settings.provider,
             instructions=instructions,
             checklist=bundle.checklist,
+            turn_detection=turn_detection,
+            input_audio_transcription=input_audio_transcription,
+            modalities=["text", "audio"],
         )
 
 

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
 
     provider: ProviderName = Field(default="azure", alias="PROVIDER")
-    voice_name: str = Field(default="alloy", alias="VOICE_NAME")
+    voice_name: str = Field(default="marin", alias="VOICE_NAME")
     azure_openai_endpoint: str | None = Field(default=None, alias="AZURE_OPENAI_ENDPOINT")
     azure_openai_key: str | None = Field(default=None, alias="AZURE_OPENAI_KEY")
     azure_openai_api_version: str = Field(default="2024-05-01-preview", alias="AZURE_OPENAI_API_VERSION")

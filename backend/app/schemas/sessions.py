@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,9 @@ class SessionConfig(BaseModel):
     provider: ProviderName
     instructions: str
     checklist: List[ChecklistKey]
+    turn_detection: Optional[Dict[str, Any]] = None
+    input_audio_transcription: Optional[Dict[str, Any]] = None
+    modalities: List[str] = Field(default_factory=lambda: ["text", "audio"])
 
 
 class SessionResponse(BaseModel):

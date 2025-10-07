@@ -1,5 +1,8 @@
 # AI Voice Agent Bootstrap
 
+Video Tutorial:
+https://youtu.be/kU4L-JXq9sM
+
 Lightweight teaching environment that mirrors a realtime customer-satisfaction survey agent working alongside a human moderator. The backend issues short-lived Azure OpenAI realtime sessions, while the frontend guides a workshop participant through connecting their microphone, monitoring the conversation, and following moderator prompts to keep the agent on track. No database or background services are required, making it easy to demo end-to-end voice flows in minutes.
 
 ## Architecture
@@ -13,7 +16,7 @@ Lightweight teaching environment that mirrors a realtime customer-satisfaction s
 - Python **3.12**
 - Node.js **18+** (or a compatible npm release)
 - Optional but recommended: [`uv`](https://github.com/astral-sh/uv) for backend dependency management
-- Azure OpenAI resource with both realtime and chat-capable deployments
+- Azure OpenAI resource with both realtime (e.g. `gpt-realtime`) and chat-capable deployments (e.g. `gpt-5-chat`)
 
 ## Setup
 

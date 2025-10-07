@@ -23,6 +23,7 @@ export class WebRTCClient {
   private remoteStream: MediaStream | null = null;
   private listeners = new Set<RealtimeEventListener>();
   private provider: ProviderName | null = null;
+  private localStream: MediaStream | null = null;
   private agentTranscriptParts: string[] = [];
   private agentTranscriptTimestamp: number | null = null;
   private agentTranscriptLastDelivered: string | null = null;
@@ -30,6 +31,14 @@ export class WebRTCClient {
   private userTranscriptTimestamp: number | null = null;
   private agentAudioActive = false;
   private userAudioActive = false;
+  private userAudioActiveLocal = false;
+  private userAudioActiveServer = false;
+  private muted = false;
+  private localAudioContext: AudioContext | null = null;
+  private localAudioAnalyser: AnalyserNode | null = null;
+  private localAudioSource: MediaStreamAudioSourceNode | null = null;
+  private localAudioMonitorId: number | null = null;
+  private localAudioSilenceTimerId: number | null = null;
 
   addEventListener(listener: RealtimeEventListener) {
     this.listeners.add(listener);
@@ -57,6 +66,8 @@ export class WebRTCClient {
 
     this.provider = config.provider;
     this.resetTranscriptState();
+    this.localStream = config.mediaStream;
+    this.muted = false;
 
     this.pc.onconnectionstatechange = () => {
       config.onConnectionStateChange?.(this.pc!.connectionState);
@@ -104,6 +115,8 @@ export class WebRTCClient {
 
     const answerSdp = await response.text();
     await this.pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
+    this.startLocalUserAudioMonitor(config.mediaStream);
   }
 
   getRemoteStream(): MediaStream | null {
@@ -175,6 +188,8 @@ export class WebRTCClient {
     this.pc = null;
     this.provider = null;
     this.resetTranscriptState();
+    this.localStream = null;
+    this.muted = false;
     if (this.audioElement) {
       this.audioElement.srcObject = null;
       this.audioElement = null;
@@ -183,6 +198,8 @@ export class WebRTCClient {
       this.emit({ type: "remote_stream.ended" });
     }
     this.remoteStream = null;
+
+    this.stopLocalUserAudioMonitor();
   }
 
   private resetTranscriptState() {
@@ -192,7 +209,10 @@ export class WebRTCClient {
     this.agentTranscriptLastDeliveredAt = null;
     this.userTranscriptTimestamp = null;
     this.agentAudioActive = false;
-    this.userAudioActive = false;
+    this.userAudioActiveLocal = false;
+    this.userAudioActiveServer = false;
+    this.muted = false;
+    this.updateUserAudioActive();
   }
 
   private appendAgentTranscript(delta: string) {
@@ -303,17 +323,17 @@ export class WebRTCClient {
           this.flushAgentTranscript(onTranscript);
           break;
         case "conversation.item.input_audio_transcription.completed":
-          this.userAudioActive = false;
+          this.setServerUserAudioActive(false);
           if (typeof event.transcript === "string") {
             this.flushUserTranscript(onTranscript, event.transcript);
           }
           break;
         case "input_audio_buffer.speech_started":
-          this.userAudioActive = true;
+          this.setServerUserAudioActive(true);
           this.markUserSpeechStart();
           break;
         case "input_audio_buffer.speech_stopped":
-          this.userAudioActive = false;
+          this.setServerUserAudioActive(false);
           this.flushUserTranscript(onTranscript);
           break;
         case "output_audio_buffer.started":
@@ -328,4 +348,173 @@ export class WebRTCClient {
     }
   }
 
+  private startLocalUserAudioMonitor(stream: MediaStream) {
+    this.stopLocalUserAudioMonitor();
+
+    const AudioContextClass =
+      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) {
+      return;
+    }
+
+    let context: AudioContext;
+    try {
+      context = new AudioContextClass();
+    } catch (error) {
+      console.warn("Failed to create audio context for local speech monitor", error);
+      return;
+    }
+
+    let source: MediaStreamAudioSourceNode;
+    try {
+      source = context.createMediaStreamSource(stream);
+    } catch (error) {
+      console.warn("Failed to bind media stream for speech monitor", error);
+      void context.close().catch(() => undefined);
+      return;
+    }
+
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.7;
+
+    try {
+      source.connect(analyser);
+    } catch (error) {
+      console.warn("Failed to connect analyser for speech monitor", error);
+      try {
+        source.disconnect();
+      } catch {
+        // ignore disconnect errors
+      }
+      void context.close().catch(() => undefined);
+      return;
+    }
+
+    this.localAudioContext = context;
+    this.localAudioSource = source;
+    this.localAudioAnalyser = analyser;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const USER_SPEECH_THRESHOLD = 25;
+    const REQUIRED_CONSECUTIVE_FRAMES = 15;
+    const SILENCE_DEBOUNCE_MS = 1500;
+
+    let consecutiveAboveThreshold = 0;
+
+    const monitor = () => {
+      if (!this.localAudioAnalyser) {
+        return;
+      }
+
+      this.localAudioAnalyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+
+      if (average > USER_SPEECH_THRESHOLD) {
+        consecutiveAboveThreshold += 1;
+        if (consecutiveAboveThreshold >= REQUIRED_CONSECUTIVE_FRAMES && !this.muted) {
+          this.clearLocalSilenceTimer();
+          this.setLocalUserAudioActive(true);
+        }
+      } else {
+        consecutiveAboveThreshold = 0;
+        if (this.userAudioActiveLocal && this.localAudioSilenceTimerId === null) {
+          this.localAudioSilenceTimerId = window.setTimeout(() => {
+            this.localAudioSilenceTimerId = null;
+            this.setLocalUserAudioActive(false);
+          }, SILENCE_DEBOUNCE_MS);
+        }
+      }
+
+      this.localAudioMonitorId = window.requestAnimationFrame(monitor);
+    };
+
+    this.localAudioMonitorId = window.requestAnimationFrame(monitor);
+  }
+
+  private stopLocalUserAudioMonitor() {
+    if (this.localAudioMonitorId !== null) {
+      window.cancelAnimationFrame(this.localAudioMonitorId);
+      this.localAudioMonitorId = null;
+    }
+
+    this.clearLocalSilenceTimer();
+
+    if (this.localAudioSource) {
+      try {
+        this.localAudioSource.disconnect();
+      } catch {
+        // ignore disconnect errors
+      }
+      this.localAudioSource = null;
+    }
+
+    if (this.localAudioAnalyser) {
+      try {
+        this.localAudioAnalyser.disconnect();
+      } catch {
+        // ignore disconnect errors
+      }
+      this.localAudioAnalyser = null;
+    }
+
+    if (this.localAudioContext) {
+      this.localAudioContext.close().catch(() => undefined);
+      this.localAudioContext = null;
+    }
+
+    this.setLocalUserAudioActive(false);
+  }
+
+  private clearLocalSilenceTimer() {
+    if (this.localAudioSilenceTimerId !== null) {
+      window.clearTimeout(this.localAudioSilenceTimerId);
+      this.localAudioSilenceTimerId = null;
+    }
+  }
+
+  private setLocalUserAudioActive(active: boolean) {
+    if (this.userAudioActiveLocal === active) {
+      return;
+    }
+    this.userAudioActiveLocal = active;
+    this.updateUserAudioActive();
+  }
+
+  private setServerUserAudioActive(active: boolean) {
+    if (this.userAudioActiveServer === active) {
+      return;
+    }
+    this.userAudioActiveServer = active;
+    this.updateUserAudioActive();
+  }
+
+  private updateUserAudioActive() {
+    if (this.localAudioAnalyser) {
+      this.userAudioActive = this.userAudioActiveLocal;
+      return;
+    }
+    this.userAudioActive = this.userAudioActiveServer;
+  }
+
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+
+    if (this.localStream) {
+      for (const track of this.localStream.getAudioTracks()) {
+        track.enabled = !muted;
+      }
+    }
+
+    if (muted) {
+      this.clearLocalSilenceTimer();
+      this.setLocalUserAudioActive(false);
+    }
+
+    this.emit({ type: "local_audio.mute_changed", muted });
+  }
+
+  isMicrophoneMuted(): boolean {
+    return this.muted;
+  }
 }

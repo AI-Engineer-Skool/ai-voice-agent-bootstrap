@@ -24,12 +24,14 @@ class AzureRealtimeProvider:
             "model": config.model,
             "voice": config.voice,
             "instructions": config.instructions,
-            "modalities": ["audio", "text"],
-            "turn_detection": {
-                "type": "server_vad",
-                "threshold": 0.5,
-            },
+            "modalities": config.modalities or ["audio", "text"],
         }
+
+        if config.turn_detection:
+            payload["turn_detection"] = config.turn_detection
+
+        if config.input_audio_transcription:
+            payload["input_audio_transcription"] = config.input_audio_transcription
 
         async with aiohttp.ClientSession() as client:
             async with client.post(

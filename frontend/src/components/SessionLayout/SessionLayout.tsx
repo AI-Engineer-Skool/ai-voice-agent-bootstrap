@@ -63,6 +63,12 @@ export function SessionLayout() {
     };
   }, [webrtc]);
 
+  useEffect(() => {
+    if (webrtc) {
+      webrtc.setMuted(muted);
+    }
+  }, [webrtc, muted]);
+
   const requestMediaStream = async () => {
     if (mediaStream) {
       return mediaStream;
@@ -90,9 +96,13 @@ export function SessionLayout() {
 
   const toggleMute = () => {
     const nextState = !muted;
-    mediaStream?.getAudioTracks().forEach((track) => {
-      track.enabled = !nextState;
-    });
+    if (webrtc) {
+      webrtc.setMuted(nextState);
+    } else {
+      mediaStream?.getAudioTracks().forEach((track) => {
+        track.enabled = !nextState;
+      });
+    }
     setMuted(nextState);
   };
 

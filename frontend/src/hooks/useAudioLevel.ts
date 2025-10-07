@@ -6,7 +6,7 @@ const MAX_DECIBELS = -10;
 export function useAudioLevel(stream: MediaStream | null, enabled = true): number {
   const [level, setLevel] = useState(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const rafRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -49,7 +49,9 @@ export function useAudioLevel(stream: MediaStream | null, enabled = true): numbe
 
     source.connect(analyser);
     analyserRef.current = analyser;
-    dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+    // Allocate backing ArrayBuffer explicitly to satisfy TS 5.5 stricter typing
+    const dataBuffer = new ArrayBuffer(analyser.frequencyBinCount);
+    dataArrayRef.current = new Uint8Array(dataBuffer) as Uint8Array<ArrayBuffer>;
 
     const update = () => {
       const analyserNode = analyserRef.current;
