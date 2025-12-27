@@ -45,7 +45,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ status: "connecting", errorMessage: null });
 
     try {
-      const session = await apiClient.post<SessionResponse>("/api/sessions", {});
+      const session = await apiClient.post<SessionResponse>(
+        "/api/sessions",
+        {},
+      );
       const client = new WebRTCClient();
 
       await client.connect({
@@ -73,7 +76,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       console.error("Failed to start session", error);
       set({
         status: "error",
-        errorMessage: error instanceof Error ? error.message : "Failed to start session",
+        errorMessage:
+          error instanceof Error ? error.message : "Failed to start session",
       });
     }
   },

@@ -1,0 +1,64 @@
+{
+  "name": "AI Voice Agent Bootstrap",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ai-voice-agent-bootstrap",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python - Backend
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        // TypeScript/JavaScript - Frontend
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        // Docker
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/ai-voice-agent-bootstrap/backend/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
+      }
+    }
+  },
+
+  "forwardPorts": [8000, 5173],
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI Backend",
+      "onAutoForward": "notify"
+    },
+    "5173": {
+      "label": "Vite Frontend",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "remoteUser": "vscode",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "username": "vscode",
+      "uid": "1000",
+      "gid": "1000",
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  "hostRequirements": {
+    "cpus": 4
+  }
+}

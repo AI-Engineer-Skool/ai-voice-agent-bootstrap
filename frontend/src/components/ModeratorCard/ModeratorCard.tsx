@@ -7,7 +7,11 @@ export interface ModeratorCardProps {
   checklistComplete: boolean;
 }
 
-export function ModeratorCard({ guidanceText, tone, checklistComplete }: ModeratorCardProps) {
+export function ModeratorCard({
+  guidanceText,
+  tone,
+  checklistComplete,
+}: ModeratorCardProps) {
   const parsed = guidanceText ? parseModeratorGuidance(guidanceText) : null;
   const toneLabel = tone && tone !== "neutral" ? tone : null;
 
@@ -18,7 +22,10 @@ export function ModeratorCard({ guidanceText, tone, checklistComplete }: Moderat
         <span className={styles.pill}>Debug helper</span>
       </div>
 
-      <p className={styles.description}>Use this panel while testing to debug how the moderator keeps the agent on track.</p>
+      <p className={styles.description}>
+        Use this panel while testing to debug how the moderator keeps the agent
+        on track.
+      </p>
 
       {parsed ? (
         <div className={styles.guidanceLines}>
@@ -36,11 +43,17 @@ export function ModeratorCard({ guidanceText, tone, checklistComplete }: Moderat
           </div>
         </div>
       ) : (
-        <div className={styles.guidance}>{guidanceText ?? "Moderator will post reminders here."}</div>
+        <div className={styles.guidance}>
+          {guidanceText ?? "Moderator will post reminders here."}
+        </div>
       )}
 
-      <div className={styles.status}>Checklist status: {checklistComplete ? "complete" : "in progress"}</div>
-      {toneLabel ? <div className={styles.tone}>Customer tone: {toneLabel}</div> : null}
+      <div className={styles.status}>
+        Checklist status: {checklistComplete ? "complete" : "in progress"}
+      </div>
+      {toneLabel ? (
+        <div className={styles.tone}>Customer tone: {toneLabel}</div>
+      ) : null}
     </div>
   );
 }

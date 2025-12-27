@@ -3,74 +3,162 @@
 Video Tutorial:
 https://youtu.be/kU4L-JXq9sM
 
-Lightweight teaching environment that mirrors a realtime customer-satisfaction survey agent working alongside a human moderator. The backend issues short-lived Azure OpenAI realtime sessions, while the frontend guides a workshop participant through connecting their microphone, monitoring the conversation, and following moderator prompts to keep the agent on track. No database or background services are required, making it easy to demo end-to-end voice flows in minutes.
+Lightweight teaching environment for a realtime customer-satisfaction survey agent with a human moderator. The backend issues short-lived realtime sessions, while the frontend handles microphone input, conversation monitoring, and moderator prompts. No database or background services required.
 
-## Architecture
+## Getting Started
 
-- **FastAPI backend (`backend/`)** – exposes `/api/sessions` to mint realtime WebRTC credentials, `/api/moderator/guidance` for checklist feedback, and `/api/health` for readiness checks.
-- **React + Vite frontend (`frontend/`)** – single-page UI that starts and stops voice sessions, renders a transcript, and polls the moderator guidance endpoint.
-- **Shell helpers (`scripts/`)** – wrapper scripts that install dependencies on demand and launch the dev servers.
+### 🚀 Dev Container (Recommended)
 
-## Prerequisites
+**This project is devcontainer-first. The easiest way to get started:**
+
+#### 1. Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [VS Code](https://code.visualstudio.com/)
+- [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- OpenAI API key with Realtime API access ([get one here](https://platform.openai.com/api-keys))
+
+#### 2. Open in Dev Container
+
+- Click **"Reopen in Container"** in VS Code
+- Or: `Cmd/Ctrl+Shift+P` → **"Dev Containers: Reopen in Container"**
+- Wait ~2-3 minutes for initial build
+
+VS Code automatically:
+
+1. Builds the container with Python 3.12 and Node.js 24
+2. Installs backend and frontend dependencies
+3. Forwards ports 8000 (backend) and 5173 (frontend)
+
+#### 3. Add your API key
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` and set your OpenAI API key:
+```bash
+OPENAI_API_KEY=sk-your-openai-api-key
+```
+
+Skip to [Running the App](#running-the-app).
+
+---
+
+### 💻 Local Setup (Without Dev Container)
+
+#### Prerequisites
 
 - Python **3.12**
-- Node.js **18+** (or a compatible npm release)
-- Optional but recommended: [`uv`](https://github.com/astral-sh/uv) for backend dependency management
-- Azure OpenAI resource with both realtime (e.g. `gpt-realtime`) and chat-capable deployments (e.g. `gpt-5-chat`)
+- Node.js **24+**
+- OpenAI API key with Realtime API access ([get one here](https://platform.openai.com/api-keys))
+- Optional: [`uv`](https://github.com/astral-sh/uv) for faster Python dependency management
 
-## Setup
+#### Setup
 
-1. **Backend environment**
+1. **Configure the backend**
    ```bash
    cp backend/.env.example backend/.env
    ```
-   Populate the Azure variables with your resource endpoint, API key, chat deployment name (for moderator prompts), and realtime WebRTC gateway URL. Adjust `VOICE_NAME`, `REALTIME_MODEL`, or `CORS_ORIGINS` if you need non-default values.
+   Edit `backend/.env` and add your OpenAI API key:
+   ```bash
+   OPENAI_API_KEY=sk-your-openai-api-key
+   ```
 
-2. **Backend dependencies**
+2. **Install backend dependencies**
    ```bash
    cd backend
    uv sync --frozen  # or: python -m venv .venv && .venv/bin/pip install -r requirements.txt
    ```
 
-3. **Frontend environment & dependencies**
+3. **Install frontend dependencies**
    ```bash
    cp frontend/.env.example frontend/.env
    cd frontend
    npm install
    ```
-   Update `VITE_API_BASE_URL` if the backend runs on a non-default host or port, and tweak `VITE_MODERATOR_INTERVAL_SECONDS` to control how often moderator guidance is refreshed.
 
-## Running Locally
+---
 
-From the repository root:
+## Running the App
 
 ```bash
-./scripts/run_backend.sh      # starts uvicorn on http://localhost:8000
-./scripts/run_frontend.sh     # installs packages (if needed) and launches Vite on http://localhost:5173
+# Terminal 1:
+./scripts/run_backend.sh      # http://localhost:8000
+
+# Terminal 2:
+./scripts/run_frontend.sh     # http://localhost:5173
 ```
 
-The backend script prefers `uv` and reuses `.venv/`; it falls back to a standard virtualenv + `pip install -r requirements.txt` if `uv` is unavailable. The frontend script runs `npm install` before `npm run dev -- --host` so the UI is reachable from other devices on your LAN.
+Open http://localhost:5173, allow microphone access, and click **Start Survey**.
+
+## Configuration
+
+### Backend Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes | - | Your OpenAI API key |
+| `OPENAI_MODERATOR_MODEL` | No | `gpt-5-chat-latest` | Model for moderator guidance |
+
+### Frontend Environment Variables
+
+Set these in `frontend/.env`:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_MODERATOR_INTERVAL_SECONDS` | No | `60` | How often (in seconds) to poll for moderator guidance. Minimum: 5 seconds. |
 
 ## Demo Flow
 
-1. Open `http://localhost:5173`, accept the microphone permission prompt, and press **Start Survey**.
-2. The frontend requests a session from `/api/sessions`, obtains a short-lived WebRTC credential, and connects to the Azure realtime endpoint.
-3. Audio and transcript updates stream back into the UI; checklist items from the bootstrap prompt populate the moderator card.
-4. The UI polls `/api/moderator/guidance` with the running transcript. Use the guidance text and tone alerts to coach the agent.
-5. Press **End Survey** to complete the flow. This clears the frontend stores, stops media tracks, and releases the ephemeral session.
+1. Open the app and accept microphone permission
+2. Click **Start Survey** - the agent will greet you
+3. Have a conversation - the moderator card shows guidance and checklist progress
+4. Click **End Survey** when done
 
-## API Reference (workshop-friendly)
+## API Reference
 
-- `POST /api/sessions` → returns `session_id`, `webrtc_url`, `ephemeral_key`, current checklist, and the chosen realtime model/voice.
-- `POST /api/moderator/guidance` → accepts `{ session_id, transcript[] }` and responds with guidance text, tone alerts, and checklist completion state.
-- `GET /api/health/ping` → simple liveness probe used by deployment scripts.
-
-The backend keeps minimal in-memory session state (_no persistence layer_) and assumes a single workshop facilitator will run the demo.
+- `POST /api/sessions` - creates a new realtime session
+- `POST /api/moderator/guidance` - analyzes transcript and returns coaching
+- `GET /api/health/ping` - health check
 
 ## Troubleshooting
 
-- **Missing realtime key** – double-check `AZURE_OPENAI_KEY` and that the resource has the Realtime API enabled. The backend logs the Azure response body on failure.
-- **WebRTC cannot connect** – ensure `AZURE_OPENAI_REALTIME_ENDPOINT` matches the WebRTC gateway for your region; the value usually ends with `/openai/realtime`.
-- **Moderator never updates** – confirm your chat deployment name in `AZURE_OPENAI_MODERATOR_DEPLOYMENT` and that `VITE_MODERATOR_INTERVAL_SECONDS` is reasonable (default 60s).
+- **No audio** - check browser microphone permissions and audio output device
+- **Connection fails** - verify your `OPENAI_API_KEY` is valid and has Realtime API access
+- **CORS errors** - ensure `CORS_ORIGINS` includes your frontend URL
 
-With the prerequisites in place you can clone the project, fill the `.env` files, run the two scripts, and have a repeatable voice-agent + moderator demo ready for workshops.
+---
+
+## Alternative: Azure OpenAI
+
+If you prefer Azure OpenAI over OpenAI, you can configure the backend to use Azure instead.
+
+### Azure Prerequisites
+
+- Azure subscription with an Azure OpenAI resource
+- Realtime deployment (e.g., `gpt-4o-realtime-preview` or `gpt-realtime`)
+- Chat deployment for moderator (e.g., `gpt-4o`)
+- See: [Azure OpenAI Realtime Audio Quickstart](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/realtime-audio-quickstart)
+
+### Azure Configuration
+
+Edit `backend/.env`:
+```bash
+PROVIDER=azure
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_KEY=your-azure-key
+AZURE_OPENAI_MODERATOR_DEPLOYMENT=your-chat-deployment-name
+AZURE_OPENAI_REALTIME_ENDPOINT=https://your-resource.openai.azure.com/openai/realtime
+```
+
+### Azure Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PROVIDER` | Yes | `openai` | Set to `azure` |
+| `AZURE_OPENAI_ENDPOINT` | Yes | - | Azure resource endpoint |
+| `AZURE_OPENAI_KEY` | Yes | - | Azure API key |
+| `AZURE_OPENAI_MODERATOR_DEPLOYMENT` | Yes | - | Chat deployment name |
+| `AZURE_OPENAI_REALTIME_ENDPOINT` | Yes | - | WebRTC gateway URL |
+| `AZURE_OPENAI_API_VERSION` | No | `2025-04-01-preview` | API version |

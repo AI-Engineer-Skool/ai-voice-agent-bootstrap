@@ -2,7 +2,10 @@ import { apiClient } from "./apiClient";
 import type { WebRTCClient } from "./webrtcClient";
 import type { TranscriptSegment } from "../types";
 import type { ChecklistKey } from "../utils/surveyConfig";
-import type { ModeratorGuidanceResponse, ModeratorTranscriptSegment } from "../types/moderator";
+import type {
+  ModeratorGuidanceResponse,
+  ModeratorTranscriptSegment,
+} from "../types/moderator";
 
 interface ModeratorOrchestratorOptions {
   sessionId: string;
@@ -91,7 +94,10 @@ export class ModeratorOrchestrator {
     this.sessionId = options.sessionId;
     this.getTranscript = options.getTranscript;
     this.webrtc = options.webrtc;
-    this.intervalMs = Math.max(Math.floor(options.pollIntervalSeconds * 1000), DEFAULT_INTERVAL_MS);
+    this.intervalMs = Math.max(
+      Math.floor(options.pollIntervalSeconds * 1000),
+      DEFAULT_INTERVAL_MS,
+    );
     this.onGuidance = options.onGuidance;
     this.onChecklistUpdate = options.onChecklistUpdate;
 
@@ -137,7 +143,8 @@ export class ModeratorOrchestrator {
     }
 
     this.clearTimer();
-    const wait = typeof delayMs === "number" && delayMs >= 0 ? delayMs : this.intervalMs;
+    const wait =
+      typeof delayMs === "number" && delayMs >= 0 ? delayMs : this.intervalMs;
     this.timerId = window.setTimeout(() => {
       this.timerId = null;
       void this.runCycle();
@@ -170,10 +177,13 @@ export class ModeratorOrchestrator {
     this.pendingRequest = true;
 
     try {
-      const guidance = await apiClient.post<ModeratorGuidanceResponse>("/api/moderator/guidance", {
-        session_id: this.sessionId,
-        transcript,
-      });
+      const guidance = await apiClient.post<ModeratorGuidanceResponse>(
+        "/api/moderator/guidance",
+        {
+          session_id: this.sessionId,
+          transcript,
+        },
+      );
 
       if (!guidance || !guidance.guidance_text) {
         this.scheduleNext();
@@ -186,9 +196,10 @@ export class ModeratorOrchestrator {
       this.onChecklistUpdate(guidance.missing_items ?? []);
       this.attemptAgentResponse();
 
-      const next = guidance.next_poll_seconds && guidance.next_poll_seconds > 0
-        ? Math.floor(guidance.next_poll_seconds * 1000)
-        : undefined;
+      const next =
+        guidance.next_poll_seconds && guidance.next_poll_seconds > 0
+          ? Math.floor(guidance.next_poll_seconds * 1000)
+          : undefined;
       this.scheduleNext(next);
     } catch (error) {
       console.warn("Moderator guidance request failed", error);
@@ -252,7 +263,10 @@ export class ModeratorOrchestrator {
       return;
     }
 
-    if (this.pendingGuidance && this.pendingGuidance.guidance_id !== this.lastDeliveredGuidanceId) {
+    if (
+      this.pendingGuidance &&
+      this.pendingGuidance.guidance_id !== this.lastDeliveredGuidanceId
+    ) {
       this.deliverGuidance(activeToken, this.pendingGuidance);
       return;
     }
@@ -260,7 +274,10 @@ export class ModeratorOrchestrator {
     this.triggerAgentResponse(activeToken);
   }
 
-  private deliverGuidance(turnToken: number, guidance: ModeratorGuidanceResponse) {
+  private deliverGuidance(
+    turnToken: number,
+    guidance: ModeratorGuidanceResponse,
+  ) {
     try {
       console.info("Forwarding moderator guidance to agent", {
         guidanceId: guidance.guidance_id,
@@ -337,7 +354,8 @@ export class ModeratorOrchestrator {
   }
 
   private readMicrophoneMuted(): boolean {
-    const candidate = (this.webrtc as any).isMicrophoneMuted || (this.webrtc as any).isMuted;
+    const candidate =
+      (this.webrtc as any).isMicrophoneMuted || (this.webrtc as any).isMuted;
     if (typeof candidate === "function") {
       try {
         return Boolean(candidate.call(this.webrtc));
@@ -358,7 +376,10 @@ export class ModeratorOrchestrator {
     return segments.slice(sliceStart).map((segment) => ({
       actor: segment.actor,
       text: segment.text,
-      timestamp: typeof segment.timestamp === "string" ? segment.timestamp : new Date(segment.timestamp).toISOString(),
+      timestamp:
+        typeof segment.timestamp === "string"
+          ? segment.timestamp
+          : new Date(segment.timestamp).toISOString(),
     }));
   }
 }

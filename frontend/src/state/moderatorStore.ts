@@ -9,7 +9,10 @@ import { ModeratorOrchestrator } from "../services/moderatorOrchestrator";
 interface ModeratorState {
   guidance?: ModeratorGuidanceResponse;
   isActive: boolean;
-  start: (sessionId: string, transcriptGetter: () => TranscriptSegment[]) => void;
+  start: (
+    sessionId: string,
+    transcriptGetter: () => TranscriptSegment[],
+  ) => void;
   stop: () => void;
   updateChecklist: (keys: ChecklistKey[]) => void;
 }
@@ -30,7 +33,10 @@ export const useModeratorStore = create<ModeratorState>((set) => ({
 
     orchestrator?.destroy();
 
-    const pollIntervalSeconds = Math.max(MODERATOR_POLL_INTERVAL_S, MIN_POLL_SECONDS);
+    const pollIntervalSeconds = Math.max(
+      MODERATOR_POLL_INTERVAL_S,
+      MIN_POLL_SECONDS,
+    );
 
     orchestrator = new ModeratorOrchestrator({
       sessionId,
@@ -44,7 +50,9 @@ export const useModeratorStore = create<ModeratorState>((set) => ({
       pollIntervalSeconds,
       onGuidance: (guidance) => {
         set({ guidance, isActive: true });
-        useSessionStore.getState().setMissingChecklist(guidance.missing_items ?? []);
+        useSessionStore
+          .getState()
+          .setMissingChecklist(guidance.missing_items ?? []);
       },
       onChecklistUpdate: (keys) => {
         useSessionStore.getState().setMissingChecklist(keys ?? []);

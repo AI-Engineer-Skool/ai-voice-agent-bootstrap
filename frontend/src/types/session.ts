@@ -1,6 +1,6 @@
 import type { ChecklistKey } from "../utils/surveyConfig";
 
-export type ProviderName = "azure";
+export type ProviderName = "azure" | "openai";
 
 export interface SessionResponse {
   session_id: string;

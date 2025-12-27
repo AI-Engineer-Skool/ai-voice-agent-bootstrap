@@ -1,14 +1,21 @@
-"""Azure OpenAI-backed moderator engine for transcript analysis."""
+"""OpenAI/Azure OpenAI-backed moderator engine for transcript analysis."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from typing import Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List, Union
 
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, AsyncOpenAI
+
+logger = logging.getLogger(__name__)
 
 from app.config import settings
-from app.schemas.moderator import ChecklistKey, ModeratorGuidanceResponse, TranscriptSegment
+from app.schemas.moderator import (
+    ChecklistKey,
+    ModeratorGuidanceResponse,
+    TranscriptSegment,
+)
 from app.services.prompt_builder import prompt_builder
 
 GREETING_WORDS = {"hello", "hi", "hey", "welcome"}
@@ -17,7 +24,15 @@ HIGHLIGHT_WORDS = {"positive", "highlight", "enjoy", "favourite", "favorite"}
 PAIN_WORDS = {"pain", "frustration", "issue", "problem", "challenge"}
 SUGGEST_WORDS = {"improve", "suggest", "next", "wish", "change"}
 CLOSING_WORDS = {"thank", "appreciate", "summary", "summarise", "summarize"}
-NEGATIVE_WORDS = {"angry", "annoyed", "frustrated", "bad", "terrible", "awful", "disappointed"}
+NEGATIVE_WORDS = {
+    "angry",
+    "annoyed",
+    "frustrated",
+    "bad",
+    "terrible",
+    "awful",
+    "disappointed",
+}
 POSITIVE_WORDS = {"great", "good", "happy", "pleased", "love", "fantastic"}
 
 CHECKLIST_LABELS: Dict[ChecklistKey, str] = {
@@ -69,8 +84,16 @@ class ModeratorEngine:
         self._checklist = bundle.checklist
         self._moderator_instructions = bundle.moderator
         self._checklist_markdown = bundle.checklist_text
-        if (
-            settings.azure_openai_endpoint
+        self._client: Union[AsyncOpenAI, AsyncAzureOpenAI, None] = None
+        self._model: str | None = None
+
+        # Initialize client based on provider
+        if settings.provider == "openai" and settings.openai_api_key:
+            self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+            self._model = settings.openai_moderator_model
+        elif (
+            settings.provider == "azure"
+            and settings.azure_openai_endpoint
             and settings.azure_openai_key
             and settings.azure_openai_moderator_deployment
         ):
@@ -79,11 +102,11 @@ class ModeratorEngine:
                 api_key=settings.azure_openai_key,
                 api_version=settings.azure_openai_api_version,
             )
-        else:
-            self._client = None
-        self._deployment = settings.azure_openai_moderator_deployment
+            self._model = settings.azure_openai_moderator_deployment
 
-    async def analyse(self, transcript: Iterable[TranscriptSegment]) -> ModeratorGuidanceResponse:
+    async def analyse(
+        self, transcript: Iterable[TranscriptSegment]
+    ) -> ModeratorGuidanceResponse:
         segments = list(transcript)
         status = self._evaluate_checklist(segments)
         tone = self._measure_tone(segments)
@@ -109,21 +132,46 @@ class ModeratorEngine:
 
         mark(
             "greeting",
-            lambda: any(actor == "agent" and any(word in text for word in GREETING_WORDS) for actor, text in lowered),
+            lambda: any(
+                actor == "agent" and any(word in text for word in GREETING_WORDS)
+                for actor, text in lowered
+            ),
         )
 
         mark(
             "rating",
             lambda: any(
-                actor == "customer" and any(num in text for num in ["1", "2", "3", "4", "5"]) for actor, text in lowered
+                actor == "customer"
+                and any(num in text for num in ["1", "2", "3", "4", "5"])
+                for actor, text in lowered
             )
-            or any(actor == "agent" and any(word in text for word in RATING_WORDS) for actor, text in lowered),
+            or any(
+                actor == "agent" and any(word in text for word in RATING_WORDS)
+                for actor, text in lowered
+            ),
         )
 
-        mark("highlight", lambda: any(word in text for _, text in lowered for word in HIGHLIGHT_WORDS))
-        mark("pain_point", lambda: any(word in text for _, text in lowered for word in PAIN_WORDS))
-        mark("suggestion", lambda: any(word in text for _, text in lowered for word in SUGGEST_WORDS))
-        mark("closing", lambda: any(actor == "agent" and any(word in text for word in CLOSING_WORDS) for actor, text in lowered))
+        mark(
+            "highlight",
+            lambda: any(
+                word in text for _, text in lowered for word in HIGHLIGHT_WORDS
+            ),
+        )
+        mark(
+            "pain_point",
+            lambda: any(word in text for _, text in lowered for word in PAIN_WORDS),
+        )
+        mark(
+            "suggestion",
+            lambda: any(word in text for _, text in lowered for word in SUGGEST_WORDS),
+        )
+        mark(
+            "closing",
+            lambda: any(
+                actor == "agent" and any(word in text for word in CLOSING_WORDS)
+                for actor, text in lowered
+            ),
+        )
 
         missing = [item for item in self._checklist if item not in completed]
         return ChecklistStatus(completed=completed, missing=missing)
@@ -134,21 +182,31 @@ class ModeratorEngine:
         tone: str | None,
         segments: List[TranscriptSegment],
     ) -> str:
-        if not self._client or not self._deployment:
+        if not self._client or not self._model:
+            logger.error(
+                "Moderator client not configured: client=%s, model=%s, provider=%s",
+                "set" if self._client else "missing",
+                self._model or "missing",
+                settings.provider,
+            )
             raise RuntimeError(
-                "Azure OpenAI moderator client is not configured; guidance cannot be generated."
+                "Moderator client is not configured; guidance cannot be generated. "
+                "Check your OPENAI_API_KEY or Azure OpenAI credentials."
             )
 
         transcript_window = segments[-40:]
         transcript_text = "\n".join(
-            f"{seg.timestamp} {seg.actor.upper()}: {seg.text}" for seg in transcript_window
+            f"{seg.timestamp} {seg.actor.upper()}: {seg.text}"
+            for seg in transcript_window
         ).strip()
         if not transcript_text:
             transcript_text = "(no transcript yet)"
 
         completed_labels = [CHECKLIST_LABELS[item] for item in status.completed]
         missing_labels = [CHECKLIST_LABELS[item] for item in status.missing]
-        priority_template = GUIDANCE_TEMPLATES.get(status.missing[0]) if status.missing else None
+        priority_template = (
+            GUIDANCE_TEMPLATES.get(status.missing[0]) if status.missing else None
+        )
 
         status_lines = [
             f"Completed checklist items: {', '.join(completed_labels) if completed_labels else 'none yet'}",
@@ -171,26 +229,36 @@ class ModeratorEngine:
             ]
         )
 
-        response = await self._client.chat.completions.create(
-            model=self._deployment,
-            messages=[
-                {"role": "system", "content": self._moderator_instructions},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.2,
-            max_completion_tokens=900,
-        )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": self._moderator_instructions},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_completion_tokens=900,
+            )
+        except Exception as exc:
+            logger.error("Moderator LLM call failed: %s", exc)
+            raise
 
         guidance = (response.choices[0].message.content or "").strip()
         return guidance
 
     def _measure_tone(self, segments: List[TranscriptSegment]):
-        recent_customer_lines = [seg.text.lower() for seg in segments if seg.actor == "customer"][-4:]
+        recent_customer_lines = [
+            seg.text.lower() for seg in segments if seg.actor == "customer"
+        ][-4:]
         if not recent_customer_lines:
             return None
-        if any(word in line for line in recent_customer_lines for word in NEGATIVE_WORDS):
+        if any(
+            word in line for line in recent_customer_lines for word in NEGATIVE_WORDS
+        ):
             return "negative"
-        if any(word in line for line in recent_customer_lines for word in POSITIVE_WORDS):
+        if any(
+            word in line for line in recent_customer_lines for word in POSITIVE_WORDS
+        ):
             return "positive"
         return "neutral"
 

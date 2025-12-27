@@ -1,6 +1,15 @@
-export type ChecklistKey = "greeting" | "rating" | "highlight" | "pain_point" | "suggestion" | "closing";
+export type ChecklistKey =
+  | "greeting"
+  | "rating"
+  | "highlight"
+  | "pain_point"
+  | "suggestion"
+  | "closing";
 
-export const CHECKLIST_LABELS: Record<ChecklistKey, { title: string; description: string }> = {
+export const CHECKLIST_LABELS: Record<
+  ChecklistKey,
+  { title: string; description: string }
+> = {
   greeting: {
     title: "Greeting & Consent",
     description: "Confirm the customer is ready for the brief survey.",
