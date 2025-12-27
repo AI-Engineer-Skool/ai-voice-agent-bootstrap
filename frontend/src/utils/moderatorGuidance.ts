@@ -4,12 +4,16 @@ export interface ParsedModeratorGuidance {
   prompt: string;
 }
 
-export function parseModeratorGuidance(raw?: string | null): ParsedModeratorGuidance | null {
+export function parseModeratorGuidance(
+  raw?: string | null,
+): ParsedModeratorGuidance | null {
   if (!raw) {
     return null;
   }
 
-  const match = raw.match(/<MODERATOR_GUIDANCE>([\s\S]*?)<\/MODERATOR_GUIDANCE>/);
+  const match = raw.match(
+    /<MODERATOR_GUIDANCE>([\s\S]*?)<\/MODERATOR_GUIDANCE>/,
+  );
   if (!match) {
     return null;
   }

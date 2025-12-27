@@ -1,4 +1,7 @@
-import { DISPLAY_TRANSCRIPT_SEGMENTS, MAX_TRANSCRIPT_SEGMENTS } from "../utils/surveyConfig";
+import {
+  DISPLAY_TRANSCRIPT_SEGMENTS,
+  MAX_TRANSCRIPT_SEGMENTS,
+} from "../utils/surveyConfig";
 import type { TranscriptSegment } from "../types";
 
 export class TranscriptBuffer {

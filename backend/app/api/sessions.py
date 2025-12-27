@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Dict
 from uuid import uuid4
@@ -12,27 +13,34 @@ from app.schemas.sessions import SessionCreateRequest, SessionResponse
 from app.services.prompt_builder import prompt_builder
 from app.services.provider_factory import mint_session
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-class SessionState(Dict[str, object]):
-    ...
+class SessionState(Dict[str, object]): ...
 
 
 _sessions: Dict[str, SessionState] = {}
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session(payload: SessionCreateRequest | None = None) -> SessionResponse:
-    config = prompt_builder.build_session_config(payload.participant_name if payload else None)
+async def create_session(
+    payload: SessionCreateRequest | None = None,
+) -> SessionResponse:
+    config = prompt_builder.build_session_config(
+        payload.participant_name if payload else None
+    )
     try:
         ephemeral_key, expires_at, webrtc_url = await mint_session(config)
     except ValueError as exc:
+        logger.error("Session creation failed (config error): %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
     except RuntimeError as exc:
+        logger.error("Session creation failed (provider error): %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="realtime_session_failed",

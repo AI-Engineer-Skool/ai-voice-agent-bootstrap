@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 const MIN_DECIBELS = -80;
 const MAX_DECIBELS = -10;
 
-export function useAudioLevel(stream: MediaStream | null, enabled = true): number {
+export function useAudioLevel(
+  stream: MediaStream | null,
+  enabled = true,
+): number {
   const [level, setLevel] = useState(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
@@ -18,7 +21,9 @@ export function useAudioLevel(stream: MediaStream | null, enabled = true): numbe
     }
 
     const AudioContextClass =
-      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!AudioContextClass) {
       return undefined;
     }
@@ -51,7 +56,9 @@ export function useAudioLevel(stream: MediaStream | null, enabled = true): numbe
     analyserRef.current = analyser;
     // Allocate backing ArrayBuffer explicitly to satisfy TS 5.5 stricter typing
     const dataBuffer = new ArrayBuffer(analyser.frequencyBinCount);
-    dataArrayRef.current = new Uint8Array(dataBuffer) as Uint8Array<ArrayBuffer>;
+    dataArrayRef.current = new Uint8Array(
+      dataBuffer,
+    ) as Uint8Array<ArrayBuffer>;
 
     const update = () => {
       const analyserNode = analyserRef.current;

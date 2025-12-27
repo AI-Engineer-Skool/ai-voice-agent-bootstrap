@@ -29,7 +29,10 @@ export function SessionLayout() {
 
   useEffect(() => {
     if (status === "live" && session && !moderatorActive) {
-      startModerator(session.session_id, () => useSessionStore.getState().transcript as TranscriptSegment[]);
+      startModerator(
+        session.session_id,
+        () => useSessionStore.getState().transcript as TranscriptSegment[],
+      );
       return;
     }
 
@@ -110,12 +113,18 @@ export function SessionLayout() {
     <div className={styles.container}>
       <div className={styles.shell}>
         <div className={styles.topRow}>
-          <StatusBanner status={status} provider={session?.provider} model={session?.model} />
+          <StatusBanner
+            status={status}
+            provider={session?.provider}
+            model={session?.model}
+          />
           <Controls
             status={status}
             onStart={handleStart}
             onStop={handleStop}
-            canStart={status === "idle" || status === "ended" || status === "error"}
+            canStart={
+              status === "idle" || status === "ended" || status === "error"
+            }
             canStop={status === "live"}
             muted={muted}
             onToggleMute={toggleMute}

@@ -62,7 +62,9 @@ export class WebRTCClient {
     this.audioElement = new Audio();
     this.audioElement.autoplay = true;
 
-    this.pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    this.pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
 
     this.provider = config.provider;
     this.resetTranscriptState();
@@ -84,9 +86,12 @@ export class WebRTCClient {
       }
     };
 
-    this.dataChannel = this.pc.createDataChannel("oai-events", { ordered: true });
+    this.dataChannel = this.pc.createDataChannel("oai-events", {
+      ordered: true,
+    });
 
-    this.dataChannel.onmessage = (event) => this.handleDataChannelMessage(event.data, config.onTranscript);
+    this.dataChannel.onmessage = (event) =>
+      this.handleDataChannelMessage(event.data, config.onTranscript);
 
     this.dataChannel.onopen = () => {
       this.emit({ type: "data_channel.open" });
@@ -100,14 +105,17 @@ export class WebRTCClient {
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
 
-    const response = await fetch(`${config.webrtcUrl}?model=${encodeURIComponent(config.model)}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/sdp",
-        Authorization: `Bearer ${config.ephemeralKey}`,
+    const response = await fetch(
+      `${config.webrtcUrl}?model=${encodeURIComponent(config.model)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/sdp",
+          Authorization: `Bearer ${config.ephemeralKey}`,
+        },
+        body: offer.sdp ?? "",
       },
-      body: offer.sdp ?? "",
-    });
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to create realtime session: ${response.status}`);
@@ -229,7 +237,7 @@ export class WebRTCClient {
 
   private flushAgentTranscript(
     onTranscript?: (segment: TranscriptSegment) => void,
-    finalText?: string
+    finalText?: string,
   ) {
     const buffered = this.agentTranscriptParts.join("");
     const textSource = finalText ?? buffered;
@@ -271,7 +279,7 @@ export class WebRTCClient {
 
   private flushUserTranscript(
     onTranscript?: (segment: TranscriptSegment) => void,
-    transcript?: string
+    transcript?: string,
   ) {
     const text = (transcript ?? "").trim();
     const timestampMs = this.userTranscriptTimestamp ?? Date.now();
@@ -288,7 +296,10 @@ export class WebRTCClient {
     });
   }
 
-  private handleDataChannelMessage(raw: string, onTranscript?: (segment: TranscriptSegment) => void) {
+  private handleDataChannelMessage(
+    raw: string,
+    onTranscript?: (segment: TranscriptSegment) => void,
+  ) {
     try {
       const event = JSON.parse(raw);
       this.emit(event);
@@ -352,7 +363,9 @@ export class WebRTCClient {
     this.stopLocalUserAudioMonitor();
 
     const AudioContextClass =
-      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!AudioContextClass) {
       return;
     }
@@ -361,7 +374,10 @@ export class WebRTCClient {
     try {
       context = new AudioContextClass();
     } catch (error) {
-      console.warn("Failed to create audio context for local speech monitor", error);
+      console.warn(
+        "Failed to create audio context for local speech monitor",
+        error,
+      );
       return;
     }
 
@@ -408,17 +424,24 @@ export class WebRTCClient {
       }
 
       this.localAudioAnalyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+      const average =
+        dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 
       if (average > USER_SPEECH_THRESHOLD) {
         consecutiveAboveThreshold += 1;
-        if (consecutiveAboveThreshold >= REQUIRED_CONSECUTIVE_FRAMES && !this.muted) {
+        if (
+          consecutiveAboveThreshold >= REQUIRED_CONSECUTIVE_FRAMES &&
+          !this.muted
+        ) {
           this.clearLocalSilenceTimer();
           this.setLocalUserAudioActive(true);
         }
       } else {
         consecutiveAboveThreshold = 0;
-        if (this.userAudioActiveLocal && this.localAudioSilenceTimerId === null) {
+        if (
+          this.userAudioActiveLocal &&
+          this.localAudioSilenceTimerId === null
+        ) {
           this.localAudioSilenceTimerId = window.setTimeout(() => {
             this.localAudioSilenceTimerId = null;
             this.setLocalUserAudioActive(false);

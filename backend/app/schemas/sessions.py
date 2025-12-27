@@ -7,8 +7,10 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-ProviderName = Literal["azure"]
-ChecklistKey = Literal["greeting", "rating", "highlight", "pain_point", "suggestion", "closing"]
+ProviderName = Literal["azure", "openai"]
+ChecklistKey = Literal[
+    "greeting", "rating", "highlight", "pain_point", "suggestion", "closing"
+]
 
 
 class SessionCreateRequest(BaseModel):

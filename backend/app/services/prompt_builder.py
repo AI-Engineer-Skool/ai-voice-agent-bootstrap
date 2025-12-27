@@ -30,9 +30,17 @@ class PromptBuilder:
         if self._bundle is not None:
             return self._bundle
 
-        persona_text = (PROMPT_DIR / "agent_persona.md").read_text(encoding="utf-8").strip()
-        checklist_text = (PROMPT_DIR / "survey_checklist.md").read_text(encoding="utf-8").strip()
-        moderator_text = (PROMPT_DIR / "moderator_instructions.md").read_text(encoding="utf-8").strip()
+        persona_text = (
+            (PROMPT_DIR / "agent_persona.md").read_text(encoding="utf-8").strip()
+        )
+        checklist_text = (
+            (PROMPT_DIR / "survey_checklist.md").read_text(encoding="utf-8").strip()
+        )
+        moderator_text = (
+            (PROMPT_DIR / "moderator_instructions.md")
+            .read_text(encoding="utf-8")
+            .strip()
+        )
 
         appended_checklist = f"\n\n---\n{checklist_text}"
         persona = f"{persona_text}{appended_checklist}"
@@ -55,11 +63,15 @@ class PromptBuilder:
         )
         return self._bundle
 
-    def build_session_config(self, participant_name: str | None = None) -> SessionConfig:
+    def build_session_config(
+        self, participant_name: str | None = None
+    ) -> SessionConfig:
         bundle = self.load_prompts()
         conversation_goal = bundle.persona
         if participant_name:
-            conversation_goal += f"\n\nThe customer you are interviewing is named {participant_name}."
+            conversation_goal += (
+                f"\n\nThe customer you are interviewing is named {participant_name}."
+            )
 
         conversation_goal += (
             "\n\nKeep your questions aligned with the checklist. Summarise the highlight, pain point,"
@@ -67,20 +79,27 @@ class PromptBuilder:
         )
         instructions = conversation_goal
 
-        turn_detection = {
-            "type": "server_vad",
-            "threshold": 0.9,
-            "prefix_padding_ms": 300,
-            "silence_duration_ms": 1500,
-            "create_response": False,
-        }
+        if settings.provider == "azure":
+            turn_detection = {
+                "type": "server_vad",
+                "threshold": 0.9,
+                "prefix_padding_ms": 300,
+                "silence_duration_ms": 1500,
+                "create_response": False,
+            }
+        else:
+            turn_detection = {
+                "type": "semantic_vad",
+                "create_response": False,
+                "interrupt_response": True,
+            }
 
         input_audio_transcription = {
             "model": "whisper-1",
         }
 
         return SessionConfig(
-            model=settings.get_realtime_model(),
+            model=settings.realtime_model,
             voice=settings.voice_name,
             provider=settings.provider,
             instructions=instructions,

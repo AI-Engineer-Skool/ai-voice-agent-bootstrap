@@ -21,7 +21,11 @@ const STATUS_LABEL: Record<VoiceState, string> = {
   agent: "AI is speaking",
 };
 
-export function VoiceStatusDot({ localStream, remoteStream, active }: VoiceStatusDotProps) {
+export function VoiceStatusDot({
+  localStream,
+  remoteStream,
+  active,
+}: VoiceStatusDotProps) {
   const localLevel = useAudioLevel(localStream, active);
   const remoteLevel = useAudioLevel(remoteStream, active);
 
@@ -88,8 +92,18 @@ export function VoiceStatusDot({ localStream, remoteStream, active }: VoiceStatu
         ? Math.min(remoteLevel, 1)
         : 0;
 
-  const toneClass = state === "human" ? styles.human : state === "agent" ? styles.agent : styles.idle;
-  const glowColor = state === "human" ? "59, 130, 246" : state === "agent" ? "34, 197, 94" : "148, 163, 184";
+  const toneClass =
+    state === "human"
+      ? styles.human
+      : state === "agent"
+        ? styles.agent
+        : styles.idle;
+  const glowColor =
+    state === "human"
+      ? "59, 130, 246"
+      : state === "agent"
+        ? "34, 197, 94"
+        : "148, 163, 184";
   const scaled = Math.min(intensity * 2.8, 1.2);
   const scale = 1 + scaled * 0.4;
   const glowBlur = 32 + scaled * 24;

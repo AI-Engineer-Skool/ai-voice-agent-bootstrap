@@ -14,7 +14,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
       detail = undefined;
     }
 
-    const error: ApiError = new Error(detail ?? `Request failed with status ${response.status}`);
+    const error: ApiError = new Error(
+      detail ?? `Request failed with status ${response.status}`
+    );
     error.response = response;
     throw error;
   }
@@ -30,7 +32,9 @@ function buildUrl(path: string): string {
   if (path.startsWith("http")) {
     return path;
   }
-  return `${API_BASE_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${API_BASE_URL.replace(/\/$/, "")}${
+    path.startsWith("/") ? path : `/${path}`
+  }`;
 }
 
 export const apiClient = {
